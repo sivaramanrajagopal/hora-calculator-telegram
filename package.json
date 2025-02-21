@@ -1,7 +1,7 @@
 {
   "name": "hora-calculator-telegram",
   "version": "1.0.0",
-  "description": "",
+  "description": "A Telegram bot for calculating auspicious times based on Hora calculations.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
