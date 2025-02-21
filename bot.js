@@ -9,6 +9,13 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 // Keep track of users who want notifications
 const notificationUsers = new Set();
 
+// Add timezone handling
+function getIndianTime() {
+    return new Date(new Date().toLocaleString('en-US', {
+        timeZone: 'Asia/Kolkata'
+    }));
+}
+
 // Planet definitions with both languages
 const planets = {
     surya: { 
@@ -79,8 +86,9 @@ const ubaHoraiSequences = {
 
 // Utility functions
 function formatTime(date) {
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
+    const indianTime = getIndianTime();
+    const hours = indianTime.getHours();
+    const minutes = indianTime.getMinutes();
     const ampm = hours >= 12 ? 'PM' : 'AM';
     const hour12 = hours % 12 || 12;
     const hour24 = hours.toString().padStart(2, '0');
@@ -93,7 +101,8 @@ function formatTime(date) {
 }
 
 function getTimeRange(date) {
-    const hours = date.getHours();
+    const indianTime = getIndianTime();
+    const hours = indianTime.getHours();
     const startHour = hours;
     const endHour = (hours + 1) % 24;
     
@@ -107,17 +116,21 @@ function getTimeRange(date) {
 }
 
 function getCurrentHorai(date) {
-    const dayOfWeek = date.getDay();
-    const hours = date.getHours();
+    const indianTime = getIndianTime();
+    const dayOfWeek = indianTime.getDay();
+    const hours = indianTime.getHours();
     const adjustedHour = (hours + 18) % 24;
     const sequence = planetSequences[dayOfWeek];
     return sequence[Math.floor(adjustedHour / 1) % 7];
 }
 
 function getCurrentSubHorai(mainHorai, minutes) {
-    const subIndex = Math.floor((minutes % 60) / 12);
+    const indianTime = getIndianTime();
+    const subIndex = Math.floor((indianTime.getMinutes() % 60) / 12);
     return ubaHoraiSequences[mainHorai][subIndex];
-}// Keyboard and notification functions
+}
+
+// Keyboard and notification functions
 function getMainKeyboard() {
     return Markup.keyboard([
         ['🕒 Current Hora', '📅 Daily Schedule'],
@@ -130,28 +143,26 @@ let notificationInterval;
 function startNotifications(ctx) {
     if (!notificationInterval) {
         notificationInterval = setInterval(() => {
-            const now = new Date();
+            const now = getIndianTime();
             const minutes = now.getMinutes();
             
-            // Send notification at the start of each hora (every hour)
             if (minutes === 0) {
                 notificationUsers.forEach(userId => {
                     sendHoraNotification(userId);
                 });
             }
             
-            // Send notification at each sub-hora change (every 12 minutes)
             if (minutes % 12 === 0) {
                 notificationUsers.forEach(userId => {
                     sendSubHoraNotification(userId);
                 });
             }
-        }, 60000); // Check every minute
+        }, 60000);
     }
 }
 
 function sendHoraNotification(userId) {
-    const now = new Date();
+    const now = getIndianTime();
     const currentHorai = getCurrentHorai(now);
     const message = 
         `⏰ Hora Change Alert!\n\n` +
@@ -162,7 +173,7 @@ function sendHoraNotification(userId) {
 }
 
 function sendSubHoraNotification(userId) {
-    const now = new Date();
+    const now = getIndianTime();
     const currentHorai = getCurrentHorai(now);
     const currentSubHorai = getCurrentSubHorai(currentHorai, now.getMinutes());
     const message = 
@@ -173,14 +184,15 @@ function sendSubHoraNotification(userId) {
 }
 
 function getDailySchedule(date) {
-    const dayOfWeek = date.getDay();
+    const indianTime = getIndianTime();
+    const dayOfWeek = indianTime.getDay();
     const sequence = planetSequences[dayOfWeek];
     let schedule = '';
 
     for (let hour = 0; hour < 24; hour++) {
         const adjustedHour = (hour + 18) % 24;
         const planetKey = sequence[Math.floor(adjustedHour / 1) % 7];
-        const startTime = new Date(date);
+        const startTime = new Date(indianTime);
         startTime.setHours(hour, 0, 0);
         const times = formatTime(startTime);
         
@@ -203,7 +215,7 @@ bot.command('start', (ctx) => {
 });
 
 bot.hears('🕒 Current Hora', (ctx) => {
-    const now = new Date();
+    const now = getIndianTime();
     const currentHorai = getCurrentHorai(now);
     const currentSubHorai = getCurrentSubHorai(currentHorai, now.getMinutes());
     const times = formatTime(now);
@@ -211,7 +223,8 @@ bot.hears('🕒 Current Hora', (ctx) => {
         year: 'numeric', 
         month: 'long', 
         day: 'numeric',
-        weekday: 'long'
+        weekday: 'long',
+        timeZone: 'Asia/Kolkata'
     });
 
     const message = 
@@ -233,12 +246,13 @@ bot.hears('🕒 Current Hora', (ctx) => {
 });
 
 bot.hears('📅 Daily Schedule', (ctx) => {
-    const now = new Date();
+    const now = getIndianTime();
     const dateStr = now.toLocaleDateString('en-US', { 
         year: 'numeric', 
         month: 'long', 
         day: 'numeric',
-        weekday: 'long'
+        weekday: 'long',
+        timeZone: 'Asia/Kolkata'
     });
 
     const schedule = getDailySchedule(now);
